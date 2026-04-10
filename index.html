@@ -2,128 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Master Pro - Managed Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #020617; --card: #1e293b; --accent: #38bdf8; --success: #22c55e; --danger: #ef4444; --warning: #fbbf24; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        :root { 
+            --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; 
+            --success: #10b981; --danger: #f43f5e; --warning: #f59e0b; 
+            --panel: #111827; 
+        }
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #f1f5f9; }
+        body { display: flex; flex-direction: column; }
         
-        .nav-tabs { background: #111827; display: flex; gap: 10px; padding: 10px 25px; border-bottom: 2px solid #334155; align-items: center; }
-        .tab-btn { background: #334155; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; }
-        .tab-btn.active { background: var(--accent); color: black; }
+        .nav-tabs { height: 65px; background: var(--panel); display: flex; gap: 12px; padding: 0 25px; border-bottom: 1px solid #334155; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); flex-shrink: 0; }
+        .tab-btn { background: #334155; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; }
+        .tab-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
 
-        .main-container { display: flex; flex-grow: 1; overflow: hidden; padding: 20px; gap: 20px; }
-        .content-area { flex: 3; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        #alert-panel { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+        .unknown-alert { color: var(--warning); font-weight: bold; background: rgba(245, 158, 11, 0.1); padding: 6px 15px; border-radius: 8px; border: 1px solid var(--warning); display: none; animation: blink 1.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; height: calc(100vh - 65px); }
+        .content-area { flex: 3; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
         
-        .sidebar { flex: 1; background: #0f172a; border-radius: 15px; border: 1px solid #475569; display: flex; flex-direction: column; min-width: 320px; }
+        .sidebar { flex: 1; background: var(--panel); border-radius: 16px; border: 1px solid #334155; display: flex; flex-direction: column; min-width: 340px; }
         .sidebar-header { padding: 15px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
 
         #quiz-view, #admin-view { display: none; height: 100%; }
-        #quiz-view.active, #admin-view.active { display: block; }
+        #quiz-view.active { display: flex; flex-direction: column; gap: 15px; }
+        #admin-view.active { display: block; overflow-y: auto; }
         
-        .quiz-card { background: var(--card); border-radius: 20px; padding: 30px; border: 4px solid #475569; position: relative; text-align: center; margin-top: 10px; }
-        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-        .opt-card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; border: 2px solid #334155; font-size: 1.2rem; }
+        .controls { height: 60px; display: flex; gap: 12px; align-items: center; background: var(--card); padding: 0 20px; border-radius: 12px; border: 1px solid #334155; flex-shrink: 0; }
+        .quiz-card { flex: 1; background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid #475569; position: relative; text-align: center; display: flex; flex-direction: column; justify-content: space-evenly; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 10px 0; }
+        .opt-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; border: 2px solid #334155; font-size: 1.5rem; font-weight: 600; }
 
-        .admin-form { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #475569; margin-bottom: 20px; }
-        .q-list-item { background: #0f172a; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
-        
-        input, select { padding: 10px; border-radius: 5px; border: 1px solid #475569; background: #020617; color: white; margin: 5px 0; }
+        input, select { padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #020617; color: white; outline: none; }
         button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 15px; font-weight: bold; }
         .btn-green { background: var(--success); color: white; }
         .btn-red { background: var(--danger); color: white; }
         .btn-yellow { background: var(--warning); color: black; }
         .btn-blue { background: var(--accent); color: black; }
-
-        #status-dot { height: 12px; width: 12px; background: var(--danger); border-radius: 50%; display: inline-block; margin-right: 5px; }
-        #timer-bar { position: absolute; top: 0; left: 0; height: 8px; background: var(--accent); width: 100%; transition: width 1s linear; border-radius: 20px 20px 0 0; }
         
-        /* Control Bar */
-        .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; background: #1e293b; padding: 10px; border-radius: 12px; }
+        .btn-delete-icon { background: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; border:none; }
+
+        #timer-bar { position: absolute; top: 0; left: 0; height: 8px; background: var(--accent); width: 100%; transition: width 1s linear; border-radius: 24px 24px 0 0; }
+        #timer-text { font-size: 3rem; color: var(--accent); font-weight: 800; margin: 0; }
+        #q-display { font-size: 2.5rem; margin: 10px 0; color: #fff; }
+        #status-dot { height: 10px; width: 10px; background: var(--danger); border-radius: 50%; display: inline-block; margin-right: 8px; }
     </style>
 </head>
 <body>
 
 <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('quiz')">Live Dashboard</button>
-    <button class="tab-btn" onclick="switchTab('admin')">Manage Questions</button>
-    
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
+    <button class="tab-btn active" id="tab-quiz" onclick="switchTab('quiz')"><i class="fas fa-chart-line"></i> Dashboard</button>
+    <button class="tab-btn" id="tab-admin" onclick="switchTab('admin')"><i class="fas fa-tasks"></i> Manage Questions</button>
+    <div id="alert-panel">
+        <div id="unknown-msg" class="unknown-alert">⚠️ Unknown Device: <span id="unknown-id">---</span></div>
         <div id="conn-status"><span id="status-dot"></span> Port: Disconnected</div>
-        <button class="btn-yellow" id="btn-connect">Connect Master Port</button>
+        <button class="btn-yellow" id="btn-connect">Connect Port</button>
     </div>
 </div>
 
 <div class="main-container">
     <div class="content-area">
-        
         <div id="quiz-view" class="active">
             <div class="controls">
-                <select id="topic-select" style="width: 150px;"></select>
-                <button class="btn-green" id="btn-start" onclick="startQuiz()">Start Quiz 🚀</button>
-                <button class="btn-red" id="btn-stop" onclick="stopQuiz()" style="display:none;">Stop/Reset Quiz 🛑</button>
-                <button class="btn-blue" id="btn-next" onclick="nextQuestion()" style="display:none;">Next Question ➡️</button>
-                <div id="debug-box" style="font-size: 0.8rem; color: #64748b; margin-left: auto;">Serial: Monitoring...</div>
+                <select id="topic-select" style="width: 180px;"></select>
+                <button class="btn-green" onclick="startQuiz()"><i class="fas fa-play"></i> Start Quiz</button>
+                <button class="btn-red" id="btn-stop" onclick="stopQuiz()" style="display:none;"><i class="fas fa-undo"></i> Reset</button>
+                <button class="btn-blue" id="btn-next" onclick="nextQuestion()" style="display:none;"><i class="fas fa-forward"></i> Next</button>
+                <div id="debug-box" style="margin-left:auto; font-size:0.8rem; color:#94a3b8; font-family: monospace;">Monitor: Idle</div>
             </div>
-            
             <div class="quiz-card">
                 <div id="timer-bar"></div>
-                <div id="q-category" style="color: var(--accent); font-weight: bold; margin-bottom: 10px;">Topic: ---</div>
-                <h1 id="q-display" style="font-size: 2.2rem;">Ready to Start?</h1>
-                
+                <div id="q-category" style="color:var(--accent); font-weight:bold; text-transform:uppercase;">CATEGORY: ---</div>
+                <h1 id="q-display">Ready to Start?</h1>
                 <div class="options-grid">
                     <div class="opt-card" id="view-a">A: ---</div>
                     <div class="opt-card" id="view-b">B: ---</div>
                     <div class="opt-card" id="view-c">C: ---</div>
                     <div class="opt-card" id="view-d">D: ---</div>
                 </div>
-                
-                <h2 id="timer-text" style="font-size: 2.5rem; color: var(--accent);">60s</h2>
-                <div id="live-log" style="font-size: 1.2rem; min-height: 40px;">Waiting for participants...</div>
+                <h2 id="timer-text">60s</h2>
+                <div id="live-log" style="font-size: 1.2rem; min-height: 40px; color: #94a3b8;">Awaiting responses...</div>
             </div>
         </div>
-
         <div id="admin-view">
-            <div class="admin-form">
-                <h3 id="form-title">Add New Question</h3>
+            <div class="admin-form" style="background:var(--card); padding:20px; border-radius:15px; border:1px solid #475569; margin-bottom: 15px;">
+                <h3 style="margin-top:0"><i class="fas fa-edit"></i> Question Editor</h3>
                 <input type="hidden" id="edit-index" value="-1">
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
-                    <input type="text" id="adm-topic" placeholder="Category (e.g., Math, Science)">
-                    <input type="text" id="adm-q" placeholder="Enter Question Statement">
+                <div style="display: grid; grid-template-columns: 1fr 3fr; gap: 10px;">
+                    <input type="text" id="adm-topic" placeholder="Category Name">
+                    <input type="text" id="adm-q" placeholder="Enter Question">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
-                    <input type="text" id="adm-a" placeholder="Option A">
-                    <input type="text" id="adm-b" placeholder="Option B">
-                    <input type="text" id="adm-c" placeholder="Option C">
-                    <input type="text" id="adm-d" placeholder="Option D">
+                    <input type="text" id="adm-a" placeholder="Opt A"><input type="text" id="adm-b" placeholder="Opt B">
+                    <input type="text" id="adm-c" placeholder="Opt C"><input type="text" id="adm-d" placeholder="Opt D">
                 </div>
                 <div style="margin-top: 10px; display: flex; gap: 10px;">
-                    <select id="adm-correct" style="flex: 1;">
-                        <option value="A">Answer: A</option>
-                        <option value="B">Answer: B</option>
-                        <option value="C">Answer: C</option>
-                        <option value="D">Answer: D</option>
-                    </select>
-                    <button class="btn-green" onclick="saveQuestion()" style="flex: 2;">Save Question ✅</button>
+                    <select id="adm-correct" style="flex: 1;"><option value="A">Answer: A</option><option value="B">Answer: B</option><option value="C">Answer: C</option><option value="D">Answer: D</option></select>
+                    <button class="btn-green" onclick="saveQuestion()" style="flex: 2;">Save Question</button>
                     <button id="btn-cancel" class="btn-red" onclick="resetForm()" style="display:none;">Cancel</button>
                 </div>
             </div>
-
-            <h3>Question Bank</h3>
+            <h3>Saved Questions</h3>
             <div id="questions-container"></div>
         </div>
     </div>
-
     <div class="sidebar">
-        <div class="sidebar-header">
-            <h3>Leaderboard</h3>
-            <button class="btn-red" onclick="resetScores()" style="font-size: 0.8rem;">Reset Scores</button>
+        <div class="sidebar-header"><h3>Leaderboard</h3><button class="btn-red" onclick="resetScores()" style="padding: 5px 10px; font-size: 0.8rem;">Clear All</button></div>
+        <div style="padding: 15px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155;">
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="reg-id" placeholder="ID" style="width: 60px;">
+                <input type="text" id="reg-name" placeholder="Name" style="flex:1">
+                <button class="btn-blue" onclick="registerUser()"><i class="fas fa-plus"></i></button>
+            </div>
         </div>
-        <div style="padding: 15px; background: #1e293b; display: flex; gap: 5px;">
-            <input type="text" id="reg-id" placeholder="ID" style="width: 50px;">
-            <input type="text" id="reg-name" placeholder="Name" style="flex: 1;">
-            <button class="btn-blue" onclick="registerUser()">Reg</button>
-        </div>
-        <div id="rank-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+        <div id="rank-list" style="flex-grow: 1; overflow-y: auto;"></div>
     </div>
 </div>
 
@@ -131,132 +128,71 @@
     let questions = JSON.parse(localStorage.getItem('quizData')) || [];
     let users = JSON.parse(localStorage.getItem('quizUsers')) || {};
     let scores = JSON.parse(localStorage.getItem('quizScores')) || {};
-    let port, reader, currentQ = 0, timer, canAnswer = false, answeredSet = new Set();
-    let filteredQuestions = [];
+    let port, currentQ = 0, timer, canAnswer = false, answeredSet = new Set(), filteredQuestions = [];
 
-    updateRanks();
-    renderQuestions();
-    updateTopicDropdown();
+    updateRanks(); renderQuestions(); updateTopicDropdown();
 
     function switchTab(type) {
-        document.getElementById('quiz-view').classList.remove('active');
-        document.getElementById('admin-view').classList.remove('active');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(type + '-view').classList.add('active');
-        event.currentTarget.classList.add('active');
+        document.getElementById('quiz-view').style.display = (type === 'quiz') ? 'flex' : 'none';
+        document.getElementById('admin-view').style.display = (type === 'admin') ? 'block' : 'none';
+        document.getElementById('tab-quiz').classList.toggle('active', type === 'quiz');
+        document.getElementById('tab-admin').classList.toggle('active', type === 'admin');
     }
 
-    // --- NEW CONTROL FUNCTIONS ---
-    function stopQuiz() {
-        if(confirm("Stop the current quiz and reset to beginning?")) {
-            clearInterval(timer);
-            canAnswer = false;
-            currentQ = 0;
-            document.getElementById('q-display').innerText = "Quiz Stopped. Ready to Start?";
-            document.getElementById('timer-text').innerText = "60s";
-            document.getElementById('timer-bar').style.width = "100%";
-            document.getElementById('live-log').innerText = "Waiting for participants...";
-            
-            document.getElementById('btn-start').style.display = "block";
-            document.getElementById('btn-stop').style.display = "none";
-            document.getElementById('btn-next').style.display = "none";
+    if ("serial" in navigator) {
+        navigator.serial.addEventListener('disconnect', () => {
+            document.getElementById('status-dot').style.background = "var(--danger)";
+            document.getElementById('conn-status').innerHTML = '<span id="status-dot" style="background:var(--danger)"></span> Disconnected 🛑';
+            document.getElementById('btn-connect').innerText = "Connect Port";
+            port = null;
+        });
+    }
+
+    function handleInput(data) {
+        let clean = data.replace(/[^\x20-\x7E]/g, "").replace("Data Received:", "").trim();
+        if(!clean.includes(':')) return;
+        let [id, ans] = clean.split(':');
+        id = id.trim(); ans = ans.trim().toUpperCase();
+
+        // ✅ LOGIC: Monitor only shows UNKNOWN devices
+        const debugBox = document.getElementById('debug-box');
+        if(!users[id]) {
+            debugBox.innerText = "Monitor: Unknown " + id + ":" + ans;
+            showUnknown(id);
+            return; 
+        } else {
+            // Hide registered info from monitor to keep it clean
+            debugBox.innerText = "Monitor: Idle";
+        }
+
+        if(!canAnswer || answeredSet.has(id)) return;
+        answeredSet.add(id);
+
+        const correct = filteredQuestions[currentQ].correct;
+        if(ans === correct) {
+            scores[id] = (scores[id] || 0) + 10;
+            document.getElementById('live-log').innerHTML += `<span style="color:var(--success); margin:5px;">[${users[id]}: ✅]</span> `;
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            updateRanks();
+        } else {
+            document.getElementById('live-log').innerHTML += `<span style="color:var(--danger); margin:5px;">[${users[id]}: ❌]</span> `;
         }
     }
 
-    function nextQuestion() {
-        clearInterval(timer);
-        canAnswer = false;
-        currentQ++;
-        showQuestion();
+    function showUnknown(id) {
+        const div = document.getElementById('unknown-msg');
+        document.getElementById('unknown-id').innerText = id;
+        div.style.display = 'block';
+        setTimeout(() => div.style.display = 'none', 5000); 
     }
 
-    // --- ADMIN ---
-    function saveQuestion() {
-        const idx = parseInt(document.getElementById('edit-index').value);
-        const qData = {
-            topic: document.getElementById('adm-topic').value || 'General',
-            text: document.getElementById('adm-q').value,
-            a: document.getElementById('adm-a').value,
-            b: document.getElementById('adm-b').value,
-            c: document.getElementById('adm-c').value,
-            d: document.getElementById('adm-d').value,
-            correct: document.getElementById('adm-correct').value
-        };
-
-        if(!qData.text) return alert("Question text is required!");
-
-        if(idx === -1) questions.push(qData);
-        else questions[idx] = qData;
-
-        localStorage.setItem('quizData', JSON.stringify(questions));
-        resetForm();
-        renderQuestions();
-        updateTopicDropdown();
-    }
-
-    function editQuestion(i) {
-        const q = questions[i];
-        document.getElementById('edit-index').value = i;
-        document.getElementById('adm-topic').value = q.topic;
-        document.getElementById('adm-q').value = q.text;
-        document.getElementById('adm-a').value = q.a;
-        document.getElementById('adm-b').value = q.b;
-        document.getElementById('adm-c').value = q.c;
-        document.getElementById('adm-d').value = q.d;
-        document.getElementById('adm-correct').value = q.correct;
-        document.getElementById('form-title').innerText = "Editing Question #" + (i+1);
-        document.getElementById('btn-cancel').style.display = "block";
-        switchTab('admin');
-    }
-
-    function deleteQuestion(i) {
-        if(confirm("Are you sure you want to delete this question?")) {
-            questions.splice(i, 1);
-            localStorage.setItem('quizData', JSON.stringify(questions));
-            renderQuestions();
-            updateTopicDropdown();
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('edit-index').value = "-1";
-        document.getElementById('form-title').innerText = "Add New Question";
-        document.getElementById('btn-cancel').style.display = "none";
-        ['adm-topic','adm-q','adm-a','adm-b','adm-c','adm-d'].forEach(id => document.getElementById(id).value = "");
-    }
-
-    function renderQuestions() {
-        const container = document.getElementById('questions-container');
-        container.innerHTML = questions.map((q, i) => `
-            <div class="q-list-item">
-                <div>
-                    <small style="color:var(--accent)">[${q.topic}]</small> <strong>${q.text}</strong>
-                </div>
-                <div>
-                    <button class="btn-yellow" onclick="editQuestion(${i})" style="padding:5px 10px">Edit</button>
-                    <button class="btn-red" onclick="deleteQuestion(${i})" style="padding:5px 10px">Delete</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function updateTopicDropdown() {
-        const select = document.getElementById('topic-select');
-        const topics = ['All Categories', ...new Set(questions.map(q => q.topic))];
-        select.innerHTML = topics.map(t => `<option value="${t}">${t}</option>`).join('');
-    }
-
-    // --- QUIZ CORE ---
     function startQuiz() {
         const sel = document.getElementById('topic-select').value;
         filteredQuestions = sel === 'All Categories' ? questions : questions.filter(q => q.topic === sel);
-        if(filteredQuestions.length === 0) return alert("Please add questions first!");
-        
+        if(filteredQuestions.length === 0) return alert("Add questions first!");
         currentQ = 0;
-        document.getElementById('btn-start').style.display = "none";
         document.getElementById('btn-stop').style.display = "block";
         document.getElementById('btn-next').style.display = "block";
-        
         showQuestion();
     }
 
@@ -264,16 +200,16 @@
         if(currentQ >= filteredQuestions.length) {
             document.getElementById('q-display').innerText = "QUIZ COMPLETED! 🏆";
             document.getElementById('btn-next').style.display = "none";
-            canAnswer = false; return;
+            canAnswer = false; clearInterval(timer); return;
         }
         const q = filteredQuestions[currentQ];
-        document.getElementById('q-category').innerText = "Category: " + q.topic;
+        document.getElementById('q-category').innerText = "CATEGORY: " + q.topic;
         document.getElementById('q-display').innerText = q.text;
         document.getElementById('view-a').innerText = "A: " + q.a;
         document.getElementById('view-b').innerText = "B: " + q.b;
         document.getElementById('view-c').innerText = "C: " + q.c;
         document.getElementById('view-d').innerText = "D: " + q.d;
-        document.getElementById('live-log').innerHTML = "Awaiting responses...";
+        document.getElementById('live-log').innerHTML = "Waiting for responses...";
         answeredSet.clear();
         startTimer();
     }
@@ -285,33 +221,37 @@
             sec--;
             document.getElementById('timer-text').innerText = sec + "s";
             document.getElementById('timer-bar').style.width = (sec/60 * 100) + "%";
-            if(sec <= 0) {
-                clearInterval(timer); canAnswer = false;
-                document.getElementById('timer-text').innerText = "TIME EXPIRED!";
-                setTimeout(() => {
-                    currentQ++; 
-                    showQuestion();
-                }, 2000);
-            }
+            if(sec <= 0) { clearInterval(timer); canAnswer = false; currentQ++; setTimeout(showQuestion, 2000); }
         }, 1000);
     }
 
-    // --- SERIAL ---
+    function stopQuiz() {
+        if(confirm("Reset Quiz?")) {
+            clearInterval(timer); canAnswer = false;
+            document.getElementById('q-display').innerText = "Quiz Reset. Ready?";
+            document.getElementById('btn-stop').style.display = "none";
+            document.getElementById('btn-next').style.display = "none";
+            document.getElementById('timer-bar').style.width = "100%";
+        }
+    }
+
+    function nextQuestion() { clearInterval(timer); currentQ++; showQuestion(); }
+
     document.getElementById('btn-connect').onclick = async function() {
         try {
             port = await navigator.serial.requestPort();
             await port.open({ baudRate: 9600 });
             document.getElementById('status-dot').style.background = "var(--success)";
-            document.getElementById('conn-status').innerHTML = '<span id="status-dot" style="background:var(--success)"></span> Port: Connected ✅';
-            this.innerText = "Port Active";
+            document.getElementById('conn-status').innerHTML = '<span id="status-dot" style="background:var(--success)"></span> Connected ✅';
+            this.innerText = "Connected";
             readSerial();
         } catch (e) { console.error(e); }
     };
 
     async function readSerial() {
         const decoder = new TextDecoder();
-        while (port.readable) {
-            reader = port.readable.getReader();
+        while (port && port.readable) {
+            const reader = port.readable.getReader();
             try {
                 let buffer = "";
                 while (true) {
@@ -319,94 +259,66 @@
                     if (done) break;
                     buffer += decoder.decode(value);
                     if (buffer.includes('\n')) {
-                        let lines = buffer.split('\n');
-                        buffer = lines.pop();
-                        lines.forEach(line => {
-                            document.getElementById('debug-box').innerText = "Incoming: " + line.trim();
-                            if(canAnswer) handleInput(line.trim());
-                        });
+                        let lines = buffer.split('\n'); buffer = lines.pop();
+                        lines.forEach(line => handleInput(line.trim()));
                     }
                 }
-            } finally { reader.releaseLock(); }
+            } catch(e) { break; } finally { reader.releaseLock(); }
         }
     }
 
-    function handleInput(data) {
-        let clean = data.replace(/[^\x20-\x7E]/g, "").replace("Data Received:", "").trim();
-        if(!clean.includes(':')) return;
-        
-        let [id, ans] = clean.split(':');
-        id = id.trim(); ans = ans.trim().toUpperCase();
-
-        if(!users[id]) return;
-        if(answeredSet.has(id)) return;
-        answeredSet.add(id);
-
-        const correct = filteredQuestions[currentQ].correct;
-        const name = users[id];
-        const log = document.getElementById('live-log');
-
-        if(ans === correct) {
-            scores[id] = (scores[id] || 0) + 10;
-            log.innerHTML += `<span style="color:var(--success); margin:5px;">[${name}: Correct ✅]</span> `;
-            localStorage.setItem('quizScores', JSON.stringify(scores));
-            updateRanks();
-        } else {
-            log.innerHTML += `<span style="color:var(--danger); margin:5px;">[${name}: Wrong ❌]</span> `;
-        }
+    function saveQuestion() {
+        const idx = parseInt(document.getElementById('edit-index').value);
+        const qData = {
+            topic: document.getElementById('adm-topic').value || 'General', text: document.getElementById('adm-q').value,
+            a: document.getElementById('adm-a').value, b: document.getElementById('adm-b').value,
+            c: document.getElementById('adm-c').value, d: document.getElementById('adm-d').value,
+            correct: document.getElementById('adm-correct').value
+        };
+        if(!qData.text) return;
+        if(idx === -1) questions.push(qData); else questions[idx] = qData;
+        localStorage.setItem('quizData', JSON.stringify(questions));
+        resetForm(); renderQuestions(); updateTopicDropdown();
     }
 
-    // --- USER MANAGEMENT ---
+    function renderQuestions() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = questions.map((q, i) => `
+            <div style="background:var(--card); padding:10px; margin-bottom:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #334155;">
+                <div><small style="color:var(--accent)">[${q.topic}]</small> ${q.text}</div>
+                <div><button class="btn-yellow" onclick="editQuestion(${i})" style="padding:4px 10px; font-size:0.8rem;">Edit</button>
+                <button class="btn-red" onclick="deleteQuestion(${i})" style="padding:4px 10px; font-size:0.8rem;">Del</button></div>
+            </div>`).join('');
+    }
+
     function registerUser() {
         const id = document.getElementById('reg-id').value.trim();
         const name = document.getElementById('reg-name').value.trim();
         if(id && name) {
             users[id] = name; scores[id] = scores[id] || 0;
             localStorage.setItem('quizUsers', JSON.stringify(users));
-            localStorage.setItem('quizScores', JSON.stringify(scores));
             updateRanks();
-            document.getElementById('reg-id').value = "";
-            document.getElementById('reg-name').value = "";
-        }
-    }
-
-    function deleteUser(id) {
-        if(confirm(`Remove ${users[id] || id}?`)) {
-            delete users[id];
-            delete scores[id];
-            localStorage.setItem('quizUsers', JSON.stringify(users));
-            localStorage.setItem('quizScores', JSON.stringify(scores));
-            updateRanks();
-        }
-    }
-
-    function resetScores() {
-        if(confirm("Reset all scores?")) {
-            Object.keys(scores).forEach(k => scores[k] = 0);
-            localStorage.setItem('quizScores', JSON.stringify(scores));
-            updateRanks();
+            document.getElementById('reg-id').value = ""; document.getElementById('reg-name').value = "";
         }
     }
 
     function updateRanks() {
         const list = document.getElementById('rank-list');
         const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
-        list.innerHTML = sorted.map(([id, val]) => {
-            if(!users[id]) return '';
-            return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #334155;">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-weight:bold;">${users[id]}</span>
-                        <small style="color:#64748b;">ID: ${id}</small>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="color:var(--accent); font-weight:bold;">${val} Pts</span>
-                        <button onclick="deleteUser('${id}')" style="background:none; color:var(--danger); padding:0; font-size:1.2rem; cursor:pointer;">&times;</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        list.innerHTML = sorted.map(([id, val]) => !users[id] ? '' : `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #334155;">
+                <div><span style="font-weight:bold;">${users[id]}</span><br><small style="color:#64748b">ID: ${id}</small></div>
+                <div style="display:flex; align-items:center; gap:12px;"><span>${val} Pts</span>
+                <button onclick="deleteUser('${id}')" class="btn-delete-icon"><i class="fas fa-trash-alt"></i></button></div>
+            </div>`).join('');
     }
+
+    function deleteUser(id) { if(confirm("Remove?")) { delete users[id]; delete scores[id]; localStorage.setItem('quizUsers', JSON.stringify(users)); updateRanks(); } }
+    function resetScores() { if(confirm("Clear Scores?")) { Object.keys(scores).forEach(k => scores[k] = 0); localStorage.setItem('quizScores', JSON.stringify(scores)); updateRanks(); } }
+    function resetForm() { document.getElementById('edit-index').value="-1"; document.getElementById('btn-cancel').style.display="none"; ['adm-topic','adm-q','adm-a','adm-b','adm-c','adm-d'].forEach(id=>document.getElementById(id).value=""); }
+    function editQuestion(i) { const q=questions[i]; document.getElementById('edit-index').value=i; document.getElementById('adm-topic').value=q.topic; document.getElementById('adm-q').value=q.text; document.getElementById('adm-a').value=q.a; document.getElementById('adm-b').value=q.b; document.getElementById('adm-c').value=q.c; document.getElementById('adm-d').value=q.d; document.getElementById('adm-correct').value=q.correct; document.getElementById('btn-cancel').style.display="block"; switchTab('admin'); }
+    function deleteQuestion(i) { questions.splice(i,1); localStorage.setItem('quizData', JSON.stringify(questions)); renderQuestions(); updateTopicDropdown(); }
+    function updateTopicDropdown() { const select = document.getElementById('topic-select'); const topics = ['All Categories', ...new Set(questions.map(q => q.topic))]; select.innerHTML = topics.map(t => `<option value="${t}">${t}</option>`).join(''); }
 </script>
 </body>
 </html>
