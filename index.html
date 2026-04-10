@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Quiz Master Pro - Managed Dashboard</title>
@@ -24,7 +24,6 @@
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
         .opt-card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; border: 2px solid #334155; font-size: 1.2rem; }
 
-        /* Admin Styles */
         .admin-form { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #475569; margin-bottom: 20px; }
         .q-list-item { background: #0f172a; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
         
@@ -37,6 +36,9 @@
 
         #status-dot { height: 12px; width: 12px; background: var(--danger); border-radius: 50%; display: inline-block; margin-right: 5px; }
         #timer-bar { position: absolute; top: 0; left: 0; height: 8px; background: var(--accent); width: 100%; transition: width 1s linear; border-radius: 20px 20px 0 0; }
+        
+        /* Control Bar */
+        .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; background: #1e293b; padding: 10px; border-radius: 12px; }
     </style>
 </head>
 <body>
@@ -55,16 +57,18 @@
     <div class="content-area">
         
         <div id="quiz-view" class="active">
-            <div style="display: flex; gap: 15px; align-items: center;">
-                <select id="topic-select" onchange="filterByTopic()" style="width: 200px;"></select>
-                <button class="btn-green" onclick="startQuiz()">Start Quiz 🚀</button>
-                <div id="debug-box" style="font-size: 0.8rem; color: #64748b;">Serial: Waiting...</div>
+            <div class="controls">
+                <select id="topic-select" style="width: 150px;"></select>
+                <button class="btn-green" id="btn-start" onclick="startQuiz()">Start Quiz 🚀</button>
+                <button class="btn-red" id="btn-stop" onclick="stopQuiz()" style="display:none;">Stop/Reset Quiz 🛑</button>
+                <button class="btn-blue" id="btn-next" onclick="nextQuestion()" style="display:none;">Next Question ➡️</button>
+                <div id="debug-box" style="font-size: 0.8rem; color: #64748b; margin-left: auto;">Serial: Monitoring...</div>
             </div>
             
             <div class="quiz-card">
                 <div id="timer-bar"></div>
                 <div id="q-category" style="color: var(--accent); font-weight: bold; margin-bottom: 10px;">Topic: ---</div>
-                <h1 id="q-display" style="font-size: 2.2rem;">Sawal Loading...</h1>
+                <h1 id="q-display" style="font-size: 2.2rem;">Ready to Start?</h1>
                 
                 <div class="options-grid">
                     <div class="opt-card" id="view-a">A: ---</div>
@@ -74,7 +78,7 @@
                 </div>
                 
                 <h2 id="timer-text" style="font-size: 2.5rem; color: var(--accent);">60s</h2>
-                <div id="live-log" style="font-size: 1.2rem; min-height: 40px;"></div>
+                <div id="live-log" style="font-size: 1.2rem; min-height: 40px;">Waiting for participants...</div>
             </div>
         </div>
 
@@ -83,8 +87,8 @@
                 <h3 id="form-title">Add New Question</h3>
                 <input type="hidden" id="edit-index" value="-1">
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
-                    <input type="text" id="adm-topic" placeholder="Topic (Maths, GK...)">
-                    <input type="text" id="adm-q" placeholder="Write Question here">
+                    <input type="text" id="adm-topic" placeholder="Category (e.g., Math, Science)">
+                    <input type="text" id="adm-q" placeholder="Enter Question Statement">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
                     <input type="text" id="adm-a" placeholder="Option A">
@@ -94,17 +98,17 @@
                 </div>
                 <div style="margin-top: 10px; display: flex; gap: 10px;">
                     <select id="adm-correct" style="flex: 1;">
-                        <option value="A">Correct: A</option>
-                        <option value="B">Correct: B</option>
-                        <option value="C">Correct: C</option>
-                        <option value="D">Correct: D</option>
+                        <option value="A">Answer: A</option>
+                        <option value="B">Answer: B</option>
+                        <option value="C">Answer: C</option>
+                        <option value="D">Answer: D</option>
                     </select>
                     <button class="btn-green" onclick="saveQuestion()" style="flex: 2;">Save Question ✅</button>
                     <button id="btn-cancel" class="btn-red" onclick="resetForm()" style="display:none;">Cancel</button>
                 </div>
             </div>
 
-            <h3>All Questions</h3>
+            <h3>Question Bank</h3>
             <div id="questions-container"></div>
         </div>
     </div>
@@ -112,7 +116,7 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <h3>Leaderboard</h3>
-            <button class="btn-red" onclick="resetScores()">Reset Scores</button>
+            <button class="btn-red" onclick="resetScores()" style="font-size: 0.8rem;">Reset Scores</button>
         </div>
         <div style="padding: 15px; background: #1e293b; display: flex; gap: 5px;">
             <input type="text" id="reg-id" placeholder="ID" style="width: 50px;">
@@ -130,7 +134,6 @@
     let port, reader, currentQ = 0, timer, canAnswer = false, answeredSet = new Set();
     let filteredQuestions = [];
 
-    // Initialize
     updateRanks();
     renderQuestions();
     updateTopicDropdown();
@@ -143,7 +146,31 @@
         event.currentTarget.classList.add('active');
     }
 
-    // --- ADMIN FUNCTIONS ---
+    // --- NEW CONTROL FUNCTIONS ---
+    function stopQuiz() {
+        if(confirm("Stop the current quiz and reset to beginning?")) {
+            clearInterval(timer);
+            canAnswer = false;
+            currentQ = 0;
+            document.getElementById('q-display').innerText = "Quiz Stopped. Ready to Start?";
+            document.getElementById('timer-text').innerText = "60s";
+            document.getElementById('timer-bar').style.width = "100%";
+            document.getElementById('live-log').innerText = "Waiting for participants...";
+            
+            document.getElementById('btn-start').style.display = "block";
+            document.getElementById('btn-stop').style.display = "none";
+            document.getElementById('btn-next').style.display = "none";
+        }
+    }
+
+    function nextQuestion() {
+        clearInterval(timer);
+        canAnswer = false;
+        currentQ++;
+        showQuestion();
+    }
+
+    // --- ADMIN ---
     function saveQuestion() {
         const idx = parseInt(document.getElementById('edit-index').value);
         const qData = {
@@ -155,6 +182,8 @@
             d: document.getElementById('adm-d').value,
             correct: document.getElementById('adm-correct').value
         };
+
+        if(!qData.text) return alert("Question text is required!");
 
         if(idx === -1) questions.push(qData);
         else questions[idx] = qData;
@@ -177,10 +206,11 @@
         document.getElementById('adm-correct').value = q.correct;
         document.getElementById('form-title').innerText = "Editing Question #" + (i+1);
         document.getElementById('btn-cancel').style.display = "block";
+        switchTab('admin');
     }
 
     function deleteQuestion(i) {
-        if(confirm("Delete this question?")) {
+        if(confirm("Are you sure you want to delete this question?")) {
             questions.splice(i, 1);
             localStorage.setItem('quizData', JSON.stringify(questions));
             renderQuestions();
@@ -204,7 +234,7 @@
                 </div>
                 <div>
                     <button class="btn-yellow" onclick="editQuestion(${i})" style="padding:5px 10px">Edit</button>
-                    <button class="btn-red" onclick="deleteQuestion(${i})" style="padding:5px 10px">Del</button>
+                    <button class="btn-red" onclick="deleteQuestion(${i})" style="padding:5px 10px">Delete</button>
                 </div>
             </div>
         `).join('');
@@ -212,32 +242,38 @@
 
     function updateTopicDropdown() {
         const select = document.getElementById('topic-select');
-        const topics = ['All Topics', ...new Set(questions.map(q => q.topic))];
+        const topics = ['All Categories', ...new Set(questions.map(q => q.topic))];
         select.innerHTML = topics.map(t => `<option value="${t}">${t}</option>`).join('');
     }
 
-    // --- QUIZ LOGIC ---
+    // --- QUIZ CORE ---
     function startQuiz() {
         const sel = document.getElementById('topic-select').value;
-        filteredQuestions = sel === 'All Topics' ? questions : questions.filter(q => q.topic === sel);
-        if(filteredQuestions.length === 0) return alert("Pehle Admin panel mein sawal add karein!");
+        filteredQuestions = sel === 'All Categories' ? questions : questions.filter(q => q.topic === sel);
+        if(filteredQuestions.length === 0) return alert("Please add questions first!");
+        
         currentQ = 0;
+        document.getElementById('btn-start').style.display = "none";
+        document.getElementById('btn-stop').style.display = "block";
+        document.getElementById('btn-next').style.display = "block";
+        
         showQuestion();
     }
 
     function showQuestion() {
         if(currentQ >= filteredQuestions.length) {
-            document.getElementById('q-display').innerText = "QUIZ COMPLETE! 🏆";
+            document.getElementById('q-display').innerText = "QUIZ COMPLETED! 🏆";
+            document.getElementById('btn-next').style.display = "none";
             canAnswer = false; return;
         }
         const q = filteredQuestions[currentQ];
-        document.getElementById('q-category').innerText = "Topic: " + q.topic;
+        document.getElementById('q-category').innerText = "Category: " + q.topic;
         document.getElementById('q-display').innerText = q.text;
         document.getElementById('view-a').innerText = "A: " + q.a;
         document.getElementById('view-b').innerText = "B: " + q.b;
         document.getElementById('view-c').innerText = "C: " + q.c;
         document.getElementById('view-d').innerText = "D: " + q.d;
-        document.getElementById('live-log').innerHTML = "Waiting for responses...";
+        document.getElementById('live-log').innerHTML = "Awaiting responses...";
         answeredSet.clear();
         startTimer();
     }
@@ -251,20 +287,23 @@
             document.getElementById('timer-bar').style.width = (sec/60 * 100) + "%";
             if(sec <= 0) {
                 clearInterval(timer); canAnswer = false;
-                document.getElementById('timer-text').innerText = "TIME UP!";
-                currentQ++; setTimeout(showQuestion, 2000);
+                document.getElementById('timer-text').innerText = "TIME EXPIRED!";
+                setTimeout(() => {
+                    currentQ++; 
+                    showQuestion();
+                }, 2000);
             }
         }, 1000);
     }
 
-    // --- SERIAL PORT LOGIC ---
+    // --- SERIAL ---
     document.getElementById('btn-connect').onclick = async function() {
         try {
             port = await navigator.serial.requestPort();
             await port.open({ baudRate: 9600 });
             document.getElementById('status-dot').style.background = "var(--success)";
             document.getElementById('conn-status').innerHTML = '<span id="status-dot" style="background:var(--success)"></span> Port: Connected ✅';
-            this.innerText = "Port Connected";
+            this.innerText = "Port Active";
             readSerial();
         } catch (e) { console.error(e); }
     };
@@ -283,7 +322,7 @@
                         let lines = buffer.split('\n');
                         buffer = lines.pop();
                         lines.forEach(line => {
-                            document.getElementById('debug-box').innerText = "Serial: " + line.trim();
+                            document.getElementById('debug-box').innerText = "Incoming: " + line.trim();
                             if(canAnswer) handleInput(line.trim());
                         });
                     }
@@ -293,34 +332,48 @@
     }
 
     function handleInput(data) {
-        let clean = data.replace("Data Received:", "").trim();
+        let clean = data.replace(/[^\x20-\x7E]/g, "").replace("Data Received:", "").trim();
         if(!clean.includes(':')) return;
+        
         let [id, ans] = clean.split(':');
         id = id.trim(); ans = ans.trim().toUpperCase();
 
+        if(!users[id]) return;
         if(answeredSet.has(id)) return;
         answeredSet.add(id);
 
         const correct = filteredQuestions[currentQ].correct;
-        const name = users[id] || "ID:"+id;
+        const name = users[id];
         const log = document.getElementById('live-log');
 
         if(ans === correct) {
             scores[id] = (scores[id] || 0) + 10;
-            log.innerHTML += `<span style="color:var(--success); margin:5px;">[${name}: ✅]</span> `;
+            log.innerHTML += `<span style="color:var(--success); margin:5px;">[${name}: Correct ✅]</span> `;
             localStorage.setItem('quizScores', JSON.stringify(scores));
             updateRanks();
         } else {
-            log.innerHTML += `<span style="color:var(--danger); margin:5px;">[${name}: ❌]</span> `;
+            log.innerHTML += `<span style="color:var(--danger); margin:5px;">[${name}: Wrong ❌]</span> `;
         }
     }
 
-    // --- LEADERBOARD ---
+    // --- USER MANAGEMENT ---
     function registerUser() {
-        const id = document.getElementById('reg-id').value;
-        const name = document.getElementById('reg-name').value;
+        const id = document.getElementById('reg-id').value.trim();
+        const name = document.getElementById('reg-name').value.trim();
         if(id && name) {
             users[id] = name; scores[id] = scores[id] || 0;
+            localStorage.setItem('quizUsers', JSON.stringify(users));
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            updateRanks();
+            document.getElementById('reg-id').value = "";
+            document.getElementById('reg-name').value = "";
+        }
+    }
+
+    function deleteUser(id) {
+        if(confirm(`Remove ${users[id] || id}?`)) {
+            delete users[id];
+            delete scores[id];
             localStorage.setItem('quizUsers', JSON.stringify(users));
             localStorage.setItem('quizScores', JSON.stringify(scores));
             updateRanks();
@@ -328,7 +381,7 @@
     }
 
     function resetScores() {
-        if(confirm("Zero all scores?")) {
+        if(confirm("Reset all scores?")) {
             Object.keys(scores).forEach(k => scores[k] = 0);
             localStorage.setItem('quizScores', JSON.stringify(scores));
             updateRanks();
@@ -338,12 +391,21 @@
     function updateRanks() {
         const list = document.getElementById('rank-list');
         const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
-        list.innerHTML = sorted.map(([id, val]) => `
-            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #334155;">
-                <span>${users[id] || id}</span>
-                <span style="color:var(--accent); font-weight:bold;">${val} Pts</span>
-            </div>
-        `).join('');
+        list.innerHTML = sorted.map(([id, val]) => {
+            if(!users[id]) return '';
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #334155;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:bold;">${users[id]}</span>
+                        <small style="color:#64748b;">ID: ${id}</small>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="color:var(--accent); font-weight:bold;">${val} Pts</span>
+                        <button onclick="deleteUser('${id}')" style="background:none; color:var(--danger); padding:0; font-size:1.2rem; cursor:pointer;">&times;</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 </script>
 </body>
