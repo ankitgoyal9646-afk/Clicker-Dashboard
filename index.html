@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quiz Master Pro - Managed Dashboard</title>
+    <style>
+        :root { --bg: #020617; --card: #1e293b; --accent: #38bdf8; --success: #22c55e; --danger: #ef4444; --warning: #fbbf24; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .nav-tabs { background: #111827; display: flex; gap: 10px; padding: 10px 25px; border-bottom: 2px solid #334155; align-items: center; }
+        .tab-btn { background: #334155; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; }
+        .tab-btn.active { background: var(--accent); color: black; }
+
+        .main-container { display: flex; flex-grow: 1; overflow: hidden; padding: 20px; gap: 20px; }
+        .content-area { flex: 3; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        
+        .sidebar { flex: 1; background: #0f172a; border-radius: 15px; border: 1px solid #475569; display: flex; flex-direction: column; min-width: 320px; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+
+        #quiz-view, #admin-view { display: none; height: 100%; }
+        #quiz-view.active, #admin-view.active { display: block; }
+        
+        .quiz-card { background: var(--card); border-radius: 20px; padding: 30px; border: 4px solid #475569; position: relative; text-align: center; margin-top: 10px; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+        .opt-card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; border: 2px solid #334155; font-size: 1.2rem; }
+
+        /* Admin Styles */
+        .admin-form { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #475569; margin-bottom: 20px; }
+        .q-list-item { background: #0f172a; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
+        
+        input, select { padding: 10px; border-radius: 5px; border: 1px solid #475569; background: #020617; color: white; margin: 5px 0; }
+        button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 15px; font-weight: bold; }
+        .btn-green { background: var(--success); color: white; }
+        .btn-red { background: var(--danger); color: white; }
+        .btn-yellow { background: var(--warning); color: black; }
+        .btn-blue { background: var(--accent); color: black; }
+
+        #status-dot { height: 12px; width: 12px; background: var(--danger); border-radius: 50%; display: inline-block; margin-right: 5px; }
+        #timer-bar { position: absolute; top: 0; left: 0; height: 8px; background: var(--accent); width: 100%; transition: width 1s linear; border-radius: 20px 20px 0 0; }
+    </style>
+</head>
+<body>
+
+<div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('quiz')">Live Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('admin')">Manage Questions</button>
+    
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
+        <div id="conn-status"><span id="status-dot"></span> Port: Disconnected</div>
+        <button class="btn-yellow" id="btn-connect">Connect Master Port</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="content-area">
+        
+        <div id="quiz-view" class="active">
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <select id="topic-select" onchange="filterByTopic()" style="width: 200px;"></select>
+                <button class="btn-green" onclick="startQuiz()">Start Quiz 🚀</button>
+                <div id="debug-box" style="font-size: 0.8rem; color: #64748b;">Serial: Waiting...</div>
+            </div>
+            
+            <div class="quiz-card">
+                <div id="timer-bar"></div>
+                <div id="q-category" style="color: var(--accent); font-weight: bold; margin-bottom: 10px;">Topic: ---</div>
+                <h1 id="q-display" style="font-size: 2.2rem;">Sawal Loading...</h1>
+                
+                <div class="options-grid">
+                    <div class="opt-card" id="view-a">A: ---</div>
+                    <div class="opt-card" id="view-b">B: ---</div>
+                    <div class="opt-card" id="view-c">C: ---</div>
+                    <div class="opt-card" id="view-d">D: ---</div>
+                </div>
+                
+                <h2 id="timer-text" style="font-size: 2.5rem; color: var(--accent);">60s</h2>
+                <div id="live-log" style="font-size: 1.2rem; min-height: 40px;"></div>
+            </div>
+        </div>
+
+        <div id="admin-view">
+            <div class="admin-form">
+                <h3 id="form-title">Add New Question</h3>
+                <input type="hidden" id="edit-index" value="-1">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
+                    <input type="text" id="adm-topic" placeholder="Topic (Maths, GK...)">
+                    <input type="text" id="adm-q" placeholder="Write Question here">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="adm-a" placeholder="Option A">
+                    <input type="text" id="adm-b" placeholder="Option B">
+                    <input type="text" id="adm-c" placeholder="Option C">
+                    <input type="text" id="adm-d" placeholder="Option D">
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                    <select id="adm-correct" style="flex: 1;">
+                        <option value="A">Correct: A</option>
+                        <option value="B">Correct: B</option>
+                        <option value="C">Correct: C</option>
+                        <option value="D">Correct: D</option>
+                    </select>
+                    <button class="btn-green" onclick="saveQuestion()" style="flex: 2;">Save Question ✅</button>
+                    <button id="btn-cancel" class="btn-red" onclick="resetForm()" style="display:none;">Cancel</button>
+                </div>
+            </div>
+
+            <h3>All Questions</h3>
+            <div id="questions-container"></div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Leaderboard</h3>
+            <button class="btn-red" onclick="resetScores()">Reset Scores</button>
+        </div>
+        <div style="padding: 15px; background: #1e293b; display: flex; gap: 5px;">
+            <input type="text" id="reg-id" placeholder="ID" style="width: 50px;">
+            <input type="text" id="reg-name" placeholder="Name" style="flex: 1;">
+            <button class="btn-blue" onclick="registerUser()">Reg</button>
+        </div>
+        <div id="rank-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+    </div>
+</div>
+
+<script>
+    let questions = JSON.parse(localStorage.getItem('quizData')) || [];
+    let users = JSON.parse(localStorage.getItem('quizUsers')) || {};
+    let scores = JSON.parse(localStorage.getItem('quizScores')) || {};
+    let port, reader, currentQ = 0, timer, canAnswer = false, answeredSet = new Set();
+    let filteredQuestions = [];
+
+    // Initialize
+    updateRanks();
+    renderQuestions();
+    updateTopicDropdown();
+
+    function switchTab(type) {
+        document.getElementById('quiz-view').classList.remove('active');
+        document.getElementById('admin-view').classList.remove('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(type + '-view').classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // --- ADMIN FUNCTIONS ---
+    function saveQuestion() {
+        const idx = parseInt(document.getElementById('edit-index').value);
+        const qData = {
+            topic: document.getElementById('adm-topic').value || 'General',
+            text: document.getElementById('adm-q').value,
+            a: document.getElementById('adm-a').value,
+            b: document.getElementById('adm-b').value,
+            c: document.getElementById('adm-c').value,
+            d: document.getElementById('adm-d').value,
+            correct: document.getElementById('adm-correct').value
+        };
+
+        if(idx === -1) questions.push(qData);
+        else questions[idx] = qData;
+
+        localStorage.setItem('quizData', JSON.stringify(questions));
+        resetForm();
+        renderQuestions();
+        updateTopicDropdown();
+    }
+
+    function editQuestion(i) {
+        const q = questions[i];
+        document.getElementById('edit-index').value = i;
+        document.getElementById('adm-topic').value = q.topic;
+        document.getElementById('adm-q').value = q.text;
+        document.getElementById('adm-a').value = q.a;
+        document.getElementById('adm-b').value = q.b;
+        document.getElementById('adm-c').value = q.c;
+        document.getElementById('adm-d').value = q.d;
+        document.getElementById('adm-correct').value = q.correct;
+        document.getElementById('form-title').innerText = "Editing Question #" + (i+1);
+        document.getElementById('btn-cancel').style.display = "block";
+    }
+
+    function deleteQuestion(i) {
+        if(confirm("Delete this question?")) {
+            questions.splice(i, 1);
+            localStorage.setItem('quizData', JSON.stringify(questions));
+            renderQuestions();
+            updateTopicDropdown();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('edit-index').value = "-1";
+        document.getElementById('form-title').innerText = "Add New Question";
+        document.getElementById('btn-cancel').style.display = "none";
+        ['adm-topic','adm-q','adm-a','adm-b','adm-c','adm-d'].forEach(id => document.getElementById(id).value = "");
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = questions.map((q, i) => `
+            <div class="q-list-item">
+                <div>
+                    <small style="color:var(--accent)">[${q.topic}]</small> <strong>${q.text}</strong>
+                </div>
+                <div>
+                    <button class="btn-yellow" onclick="editQuestion(${i})" style="padding:5px 10px">Edit</button>
+                    <button class="btn-red" onclick="deleteQuestion(${i})" style="padding:5px 10px">Del</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateTopicDropdown() {
+        const select = document.getElementById('topic-select');
+        const topics = ['All Topics', ...new Set(questions.map(q => q.topic))];
+        select.innerHTML = topics.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+
+    // --- QUIZ LOGIC ---
+    function startQuiz() {
+        const sel = document.getElementById('topic-select').value;
+        filteredQuestions = sel === 'All Topics' ? questions : questions.filter(q => q.topic === sel);
+        if(filteredQuestions.length === 0) return alert("Pehle Admin panel mein sawal add karein!");
+        currentQ = 0;
+        showQuestion();
+    }
+
+    function showQuestion() {
+        if(currentQ >= filteredQuestions.length) {
+            document.getElementById('q-display').innerText = "QUIZ COMPLETE! 🏆";
+            canAnswer = false; return;
+        }
+        const q = filteredQuestions[currentQ];
+        document.getElementById('q-category').innerText = "Topic: " + q.topic;
+        document.getElementById('q-display').innerText = q.text;
+        document.getElementById('view-a').innerText = "A: " + q.a;
+        document.getElementById('view-b').innerText = "B: " + q.b;
+        document.getElementById('view-c').innerText = "C: " + q.c;
+        document.getElementById('view-d').innerText = "D: " + q.d;
+        document.getElementById('live-log').innerHTML = "Waiting for responses...";
+        answeredSet.clear();
+        startTimer();
+    }
+
+    function startTimer() {
+        let sec = 60; canAnswer = true;
+        clearInterval(timer);
+        timer = setInterval(() => {
+            sec--;
+            document.getElementById('timer-text').innerText = sec + "s";
+            document.getElementById('timer-bar').style.width = (sec/60 * 100) + "%";
+            if(sec <= 0) {
+                clearInterval(timer); canAnswer = false;
+                document.getElementById('timer-text').innerText = "TIME UP!";
+                currentQ++; setTimeout(showQuestion, 2000);
+            }
+        }, 1000);
+    }
+
+    // --- SERIAL PORT LOGIC ---
+    document.getElementById('btn-connect').onclick = async function() {
+        try {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+            document.getElementById('status-dot').style.background = "var(--success)";
+            document.getElementById('conn-status').innerHTML = '<span id="status-dot" style="background:var(--success)"></span> Port: Connected ✅';
+            this.innerText = "Port Connected";
+            readSerial();
+        } catch (e) { console.error(e); }
+    };
+
+    async function readSerial() {
+        const decoder = new TextDecoder();
+        while (port.readable) {
+            reader = port.readable.getReader();
+            try {
+                let buffer = "";
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value);
+                    if (buffer.includes('\n')) {
+                        let lines = buffer.split('\n');
+                        buffer = lines.pop();
+                        lines.forEach(line => {
+                            document.getElementById('debug-box').innerText = "Serial: " + line.trim();
+                            if(canAnswer) handleInput(line.trim());
+                        });
+                    }
+                }
+            } finally { reader.releaseLock(); }
+        }
+    }
+
+    function handleInput(data) {
+        let clean = data.replace("Data Received:", "").trim();
+        if(!clean.includes(':')) return;
+        let [id, ans] = clean.split(':');
+        id = id.trim(); ans = ans.trim().toUpperCase();
+
+        if(answeredSet.has(id)) return;
+        answeredSet.add(id);
+
+        const correct = filteredQuestions[currentQ].correct;
+        const name = users[id] || "ID:"+id;
+        const log = document.getElementById('live-log');
+
+        if(ans === correct) {
+            scores[id] = (scores[id] || 0) + 10;
+            log.innerHTML += `<span style="color:var(--success); margin:5px;">[${name}: ✅]</span> `;
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            updateRanks();
+        } else {
+            log.innerHTML += `<span style="color:var(--danger); margin:5px;">[${name}: ❌]</span> `;
+        }
+    }
+
+    // --- LEADERBOARD ---
+    function registerUser() {
+        const id = document.getElementById('reg-id').value;
+        const name = document.getElementById('reg-name').value;
+        if(id && name) {
+            users[id] = name; scores[id] = scores[id] || 0;
+            localStorage.setItem('quizUsers', JSON.stringify(users));
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            updateRanks();
+        }
+    }
+
+    function resetScores() {
+        if(confirm("Zero all scores?")) {
+            Object.keys(scores).forEach(k => scores[k] = 0);
+            localStorage.setItem('quizScores', JSON.stringify(scores));
+            updateRanks();
+        }
+    }
+
+    function updateRanks() {
+        const list = document.getElementById('rank-list');
+        const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
+        list.innerHTML = sorted.map(([id, val]) => `
+            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #334155;">
+                <span>${users[id] || id}</span>
+                <span style="color:var(--accent); font-weight:bold;">${val} Pts</span>
+            </div>
+        `).join('');
+    }
+</script>
+</body>
+</html>
